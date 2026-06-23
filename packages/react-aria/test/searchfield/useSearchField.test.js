@@ -59,10 +59,12 @@ describe('useSearchField hook', () => {
       let stopPropagation = jest.fn();
       let onSubmit = jest.fn();
       let onKeyDown = jest.fn();
-      let event = key => ({
+      let event = (key, opts = {}) => ({
         key,
         preventDefault,
-        stopPropagation
+        stopPropagation,
+        nativeEvent: {isComposing: opts.isComposing ?? false},
+        keyCode: opts.keyCode ?? 0
       });
 
       afterEach(() => {
@@ -109,6 +111,28 @@ describe('useSearchField hook', () => {
         inputProps.onKeyDown(event('Escape'));
         expect(state.setValue).toHaveBeenCalledTimes(1);
         expect(onClear).toHaveBeenCalledTimes(1);
+      });
+
+      it('does not call onSubmit for Enter while an IME composition is in progress', () => {
+        let {inputProps} = renderSearchHook({onSubmit});
+        inputProps.onKeyDown(event('Enter', {isComposing: true}));
+        expect(onSubmit).toHaveBeenCalledTimes(0);
+        expect(preventDefault).toHaveBeenCalledTimes(0);
+      });
+
+      it('does not call onSubmit for Enter while keyCode is 229 (Safari IME fallback)', () => {
+        let {inputProps} = renderSearchHook({onSubmit});
+        inputProps.onKeyDown(event('Enter', {keyCode: 229}));
+        expect(onSubmit).toHaveBeenCalledTimes(0);
+        expect(preventDefault).toHaveBeenCalledTimes(0);
+      });
+
+      it('does not clear the value for Escape while an IME composition is in progress', () => {
+        let {inputProps} = renderSearchHook({onClear});
+        state.value = 'search';
+        inputProps.onKeyDown(event('Escape', {isComposing: true}));
+        expect(state.setValue).toHaveBeenCalledTimes(0);
+        expect(onClear).toHaveBeenCalledTimes(0);
       });
 
       it('does not return an onKeyDown prop if isDisabled is true', () => {

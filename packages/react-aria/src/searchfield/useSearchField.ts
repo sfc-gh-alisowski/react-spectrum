@@ -66,6 +66,15 @@ export function useSearchField(
   let onKeyDown = e => {
     const key = e.key;
 
+    // Do not handle keys while an IME composition is in progress. Otherwise pressing
+    // Enter to commit a CJK composition (Korean, Japanese, Chinese, etc.) would trigger
+    // onSubmit/preventDefault, and Escape would clear the field, dropping the user's
+    // in-progress input. Browsers report this via isComposing, or keyCode 229 as a
+    // fallback for Safari, which sets isComposing to false prematurely on Enter keydown.
+    if (e.nativeEvent?.isComposing || e.keyCode === 229) {
+      return;
+    }
+
     if (key === 'Enter' && (isDisabled || isReadOnly)) {
       e.preventDefault();
     }
